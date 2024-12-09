@@ -8,3 +8,5 @@ Key Steps in the Program:
     Validation: Evaluates the model with accuracy, ROC-AUC, and classification metrics.
 
 You can adapt this program further to include domain-specific features, such as molecular fingerprints, QSAR modeling, or integration with cheminformatics libraries like RDKit.
+
+Support us at https://cellmiracles.org/
