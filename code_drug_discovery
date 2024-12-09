@@ -1,0 +1,102 @@
+# Import necessary libraries
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split, GridSearchCV, cross_val_score
+from sklearn.preprocessing import StandardScaler
+from sklearn.feature_selection import SelectKBest, f_classif
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score, roc_auc_score, classification_report
+
+# Step 1: Data Loading and Preprocessing
+def load_and_preprocess_data(file_path):
+    """
+    Load and preprocess drug discovery dataset.
+    """
+    # Load dataset
+    data = pd.read_csv(file_path)
+
+    # Handle missing values
+    data = data.dropna()
+
+    # Feature-target split
+    X = data.drop(columns=["target"])
+    y = data["target"]
+
+    return X, y
+
+# Step 2: Feature Engineering
+def feature_engineering(X, num_features=10):
+    """
+    Perform feature selection to reduce dimensionality.
+    """
+    # Scale the data
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X)
+
+    # Feature selection
+    selector = SelectKBest(score_func=f_classif, k=num_features)
+    X_selected = selector.fit_transform(X_scaled, y)
+    selected_features = selector.get_support(indices=True)
+
+    return X_selected, selected_features
+
+# Step 3: Model Selection and Training
+def model_training(X_train, y_train):
+    """
+    Train a machine learning model using GridSearchCV for hyperparameter tuning.
+    """
+    # Define model and hyperparameters
+    model = RandomForestClassifier(random_state=42)
+    param_grid = {
+        "n_estimators": [50, 100, 200],
+        "max_depth": [None, 10, 20],
+        "min_samples_split": [2, 5, 10]
+    }
+
+    # Grid search with cross-validation
+    grid_search = GridSearchCV(model, param_grid, cv=5, scoring='roc_auc', verbose=2)
+    grid_search.fit(X_train, y_train)
+
+    return grid_search.best_estimator_
+
+# Step 4: Model Validation
+def validate_model(model, X_test, y_test):
+    """
+    Validate the trained model on the test set.
+    """
+    # Make predictions
+    y_pred = model.predict(X_test)
+    y_prob = model.predict_proba(X_test)[:, 1]
+
+    # Performance metrics
+    accuracy = accuracy_score(y_test, y_pred)
+    roc_auc = roc_auc_score(y_test, y_prob)
+    report = classification_report(y_test, y_pred)
+
+    return accuracy, roc_auc, report
+
+# Main Function to Integrate All Steps
+if __name__ == "__main__":
+    # File path to the dataset
+    dataset_path = "drug_discovery_data.csv"
+
+    # Load and preprocess data
+    X, y = load_and_preprocess_data(dataset_path)
+
+    # Feature engineering
+    X_selected, selected_features = feature_engineering(X)
+
+    # Split the dataset
+    X_train, X_test, y_train, y_test = train_test_split(X_selected, y, test_size=0.2, random_state=42)
+
+    # Model training
+    best_model = model_training(X_train, y_train)
+
+    # Validate model
+    accuracy, roc_auc, report = validate_model(best_model, X_test, y_test)
+
+    # Output results
+    print(f"Accuracy: {accuracy:.2f}")
+    print(f"ROC AUC: {roc_auc:.2f}")
+    print("Classification Report:")
+    print(report)
